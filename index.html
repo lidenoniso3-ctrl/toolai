@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة الأدوات الثلاثية</title>
+<style>
+    :root{
+        --main:#1abc9c;
+        --main-dark:#16a085;
+        --dark:#2c3e50;
+        --gray:#bdc3c7;
+        --light:#ecf0f1;
+    }
+    *{box-sizing:border-box;}
+    body{
+        font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background:#f4f7f6;
+        margin:0;
+        padding:20px;
+        color:#333;
+        line-height:1.7;
+    }
+    .container{max-width:680px;margin:0 auto;}
+    h1{text-align:center;color:var(--dark);margin-bottom:5px;}
+    .sub{text-align:center;color:#7f8c8d;font-size:14px;margin-top:0;margin-bottom:25px;}
+    .card{
+        background:#fff;
+        padding:20px;
+        border-radius:10px;
+        box-shadow:0 4px 10px rgba(0,0,0,.08);
+        margin-bottom:25px;
+    }
+    h2{margin-top:0;color:var(--main);border-bottom:2px solid var(--light);padding-bottom:10px;font-size:19px;}
+    input[type="text"], input[type="file"], textarea, select{
+        width:100%;
+        padding:10px;
+        margin:8px 0;
+        border:1px solid var(--gray);
+        border-radius:6px;
+        font-family:inherit;
+        font-size:15px;
+        background:#fff;
+    }
+    textarea{resize:vertical;}
+    button{
+        background:var(--main);
+        color:#fff;
+        border:none;
+        padding:11px 15px;
+        border-radius:6px;
+        cursor:pointer;
+        font-weight:bold;
+        font-size:15px;
+        width:100%;
+        margin-top:6px;
+        font-family:inherit;
+        transition:.2s;
+    }
+    button:hover{background:var(--main-dark);}
+    button:disabled{background:#95a5a6;cursor:not-allowed;}
+    .btn-secondary{background:var(--dark);}
+    .btn-secondary:hover{background:#1a252f;}
+    .btn-red{background:#e74c3c;}
+    .btn-red:hover{background:#c0392b;}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+    .btn-row button{flex:1;min-width:120px;}
+    .result-box{
+        margin-top:15px;
+        padding:12px;
+        background:#e8f8f5;
+        border-radius:6px;
+        word-break:break-all;
+        font-size:14px;
+    }
+    .result-box a{color:#0e6655;font-weight:bold;}
+    .status{margin-top:10px;font-size:14px;padding:8px;border-radius:6px;display:none;}
+    .status.ok{display:block;background:#e8f8f5;color:#0e6655;}
+    .status.err{display:block;background:#fdecea;color:#c0392b;}
+    .qr-holder{display:flex;justify-content:center;margin-top:15px;}
+    .qr-holder canvas{
+        max-width:100%;
+        height:auto;
+        border:1px solid var(--light);
+        border-radius:8px;
+        background:#fff;
+    }
+    .note{
+        font-size:13px;
+        color:#7f8c8d;
+        background:#fdf6e3;
+        border-right:4px solid #f1c40f;
+        padding:8px 12px;
+        border-radius:6px;
+        margin-top:10px;
+    }
+    .copy-btn{
+        background:transparent;
+        color:var(--main);
+        border:1px solid var(--main);
+        font-size:12px;
+        padding:4px 10px;
+        width:auto;
+        margin:5px 5px 0 0;
+        border-radius:4px;
+    }
+    .copy-btn:hover{background:var(--main);color:#fff;}
+    .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>منصة الأدوات الثلاثية</h1>
+    <p class="sub">اختصار روابط • توليد QR • تحويل صوت إلى نص</p>
+
+    <!-- ================= 1. اختصار الروابط (عبر Netlify) ================= -->
+    <div class="card">
+        <h2>1. اختصار الروابط</h2>
+        <p>أدخل الرابط الطويل ليتم توليد رابط مختصر يعمل عالميًا:</p>
+        <input type="text" id="longUrl" placeholder="https://example.com/very/long/path...">
+        <button onclick="shortenLink()">اختصار الرابط</button>
+        <div id="shortenResult" class="result-box hidden"></div>
+        <div class="note">
+            يعمل عبر دالة Netlify + Blob Storage. الرابط المختصر يعمل من أي جهاز في العالم.
+        </div>
+    </div>
+
+    <!-- ================= 2. توليد QR (نص / رابط) ================= -->
+    <div class="card">
+        <h2>2. توليد رمز QR (نص / رابط)</h2>
+        <p>اكتب أي نص أو رابط وسيتم توليد رمز QR فوراً:</p>
+        <input type="text" id="qrText" placeholder="https://example.com أو أي نص">
+        <select id="qrEcc">
+            <option value="L">مستوى التصحيح: L (أقصى سعة بيانات)</option>
+            <option value="M" selected>مستوى التصحيح: M (متوازن)</option>
+            <option value="Q">مستوى التصحيح: Q (جيد)</option>
+            <option value="H">مستوى التصحيح: H (الأقوى)</option>
+        </select>
+        <button onclick="generateTextQR()">توليد رمز QR</button>
+        <div class="qr-holder"><canvas id="qrCanvas"></canvas></div>
+        <div id="qrStatus" class="status"></div>
+        <button id="qrDownload" class="btn-secondary hidden" onclick="downloadCanvas('qrCanvas','qrcode.png')">
+            تحميل رمز QR كصورة PNG 💾
+        </button>
+    </div>
+
+    <!-- ================= 3. الصورة إلى QR ================= -->
+    <div class="card">
+        <h2>3. تحويل صورة إلى رمز QR</h2>
+        <p>اختر صورة من جهازك، وسيتم تصغيرها وتخزينها محليًا، ثم يولّد رمز QR يحمل رابطاً لها:</p>
+        <input type="file" id="imageInput" accept="image/*">
+        <button onclick="generateImageQR()">توليد رمز QR من الصورة</button>
+        <div class="qr-holder"><canvas id="imgQrCanvas"></canvas></div>
+        <div id="imgQrStatus" class="status"></div>
+        <button id="imgQrDownload" class="btn-secondary hidden" onclick="downloadCanvas('imgQrCanvas','image-qr.png')">
+            تحميل رمز QR كصورة PNG 💾
+        </button>
+        <div class="note">
+            الصورة تُخزَّن محليًا في متصفحك، ورمز QR يحمل رابطًا إليها.
+        </div>
+    </div>
+
+    <!-- ================= 4. الصوت إلى نص ================= -->
+    <div class="card">
+        <h2>4. تحويل الصوت إلى كتابة وتحميله</h2>
+        <p>اضغط على الزر وابدأ الكلام، وسيتحول كلامك إلى نص مكتوب:</p>
+        <button id="recordBtn" onclick="toggleDictation()">ابدأ التحدث الآن 🎤</button>
+        <textarea id="speechText" rows="7" placeholder="الكلام المكتوب سيظهر هنا تلقائياً..."></textarea>
+        <div id="speechStatus" class="status"></div>
+        <div class="btn-row">
+            <button id="downloadBtn" class="btn-secondary hidden" onclick="downloadTextFile()">تحميل النص 💾</button>
+            <button id="copyBtn" class="btn-secondary hidden" onclick="copyText()">نسخ النص 📋</button>
+            <button id="clearBtn" class="btn-secondary hidden" onclick="clearText()">مسح 🗑️</button>
+        </div>
+        <div class="note">
+            يعتمد على تقنية التعرف على الصوت المدمجة في المتصفح (Web Speech API).
+            الأفضل استخدام Chrome أو Edge.
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* =========================================================================
+   أدوات مساعدة عامة
+   ========================================================================= */
+const $ = id => document.getElementById(id);
+
+function showStatus(el, msg, isError) {
+    el.textContent = msg;
+    el.className = 'status ' + (isError ? 'err' : 'ok');
+}
+function hideStatus(el) { el.className = 'status'; }
+
+function downloadCanvas(canvasId, filename) {
+    const canvas = $(canvasId);
+    if (!canvas.width) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = filename;
+    a.click();
+}
+
+
+/* =========================================================================
+   القسم 1 : اختصار الروابط عبر Netlify Function
+   ========================================================================= */
+async function shortenLink() {
+    const input = $('longUrl');
+    const box = $('shortenResult');
+    let url = input.value.trim();
+
+    if (!url) {
+        alert('الرجاء إدخال رابط أولاً');
+        return;
+    }
+
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+    try { new URL(url); }
+    catch (e) { alert('الرابط غير صالح، تأكد من كتابته بشكل صحيح'); return; }
+
+    box.classList.remove('hidden');
+    box.innerHTML = '⏳ جاري اختصار الرابط...';
+
+    try {
+        const response = await fetch('/.netlify/functions/shorten', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'فشل اختصار الرابط');
+        }
+
+        const shortUrl = window.location.origin + '/s/' + data.shortCode;
+
+        box.innerHTML =
+            '✅ الرابط المختصر:<br>' +
+            '<a href="' + shortUrl + '" target="_blank">' + shortUrl + '</a>' +
+            '<br><button class="copy-btn" onclick="copyToClipboard(\'' + shortUrl + '\')">📋 نسخ الرابط</button>' +
+            '<br><small style="color:#7f8c8d">الرابط الأصلي: ' + url + '</small>';
+
+    } catch (error) {
+        console.error('Error:', error);
+        box.innerHTML = '❌ عذراً، حدث خطأ: ' + error.message;
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(
+        () => alert('تم نسخ الرابط ✅'),
+        () => alert('تعذّر النسخ، انسخ يدوياً')
+    );
+}
+
+
+/* =========================================================================
+   القسم 2 : مولّد رمز QR مكتوب من الصفر (بدون مكتبات خارجية)
+   ========================================================================= */
+const QR = (function () {
+    'use strict';
+
+    const ECC_TABLE = {
+        1:  { L:[7,1,19,0,0],    M:[10,1,16,0,0],   Q:[13,1,13,0,0],   H:[17,1,9,0,0]   },
+        2:  { L:[10,1,34,0,0],   M:[16,1,28,0,0],   Q:[22,1,22,0,0],   H:[28,1,16,0,0]  },
+        3:  { L:[15,1,55,0,0],   M:[26,1,44,0,0],   Q:[18,2,17,0,0],   H:[22,2,13,0,0]  },
+        4:  { L:[20,1,80,0,0],   M:[18,2,32,0,0],   Q:[26,2,24,0,0],   H:[16,4,9,0,0]   },
+        5:  { L:[26,1,108,0,0],  M:[24,2,43,0,0],   Q:[18,2,15,2,16],  H:[22,2,11,2,12] },
+        6:  { L:[18,2,68,0,0],   M:[16,4,27,0,0],   Q:[24,4,19,0,0],   H:[28,4,15,0,0]  },
+        7:  { L:[20,2,78,0,0],   M:[18,4,31,0,0],   Q:[18,2,14,4,15],  H:[26,4,13,1,14] },
+        8:  { L:[24,2,97,0,0],   M:[22,2,38,2,39],  Q:[22,4,18,2,19],  H:[26,4,14,2,15] },
+        9:  { L:[30,2,116,0,0],  M:[22,3,36,2,37],  Q:[20,4,16,4,17],  H:[24,4,12,4,13] },
+        10: { L:[18,2,68,2,69],  M:[26,4,43,1,44],  Q:[24,6,19,2,20],  H:[28,6,15,2,16] }
+    };
+
+    const ALIGN_POS = {
+        1:[], 2:[6,18], 3:[6,22], 4:[6,26], 5:[6,30],
+        6:[6,34], 7:[6,22,38], 8:[6,24,42], 9:[6,26,46], 10:[6,28,50]
+    };
+
+    const ECL_FORMAT = { L:1, M:0, Q:3, H:2 };
+
+    function gfMul(x, y) {
+        let z = 0;
+        for (let i = 7; i >= 0; i--) {
+            z = ((z << 1) ^ ((z >>> 7) * 0x11D)) & 0xFF;
+            if (((y >>> i) & 1) !== 0) z ^= x;
+        }
+        return z & 0xFF;
+    }
+
+    function rsDivisor(degree) {
+        const result = [];
+        for (let i = 0; i < degree - 1; i++) result.push(0);
+        result.push(1);
+        let root = 1;
+        for (let i = 0; i < degree; i++) {
+            for (let j = 0; j < result.length; j++) {
+                result[j] = gfMul(result[j], root);
+                if (j + 1 < result.length) result[j] ^= result[j + 1];
+            }
+            root = gfMul(root, 0x02);
+        }
+        return result;
+    }
+
+    function rsRemainder(data, divisor) {
+        const result = divisor.map(() => 0);
+        for (const b of data) {
+            const factor = b ^ result.shift();
+            result.push(0);
+            for (let i = 0; i < divisor.length; i++) {
+                result[i] ^= gfMul(divisor[i], factor);
+            }
+        }
+        return result;
+    }
+
+    function dataCodewords(version, ecl) {
+        const t = ECC_TABLE[version][ecl];
+        return t[1] * t[2] + t[3] * t[4];
+    }
+
+    function addEccAndInterleave(data, version, ecl) {
+        const t = ECC_TABLE[version][ecl];
+        const ecLen = t[0], b1 = t[1], d1 = t[2], b2 = t[3], d2 = t[4];
+
+        const blocks = [];
+        let k = 0;
+        for (let i = 0; i < b1; i++) { blocks.push(data.slice(k, k + d1)); k += d1; }
+        for (let i = 0; i < b2; i++) { blocks.push(data.slice(k, k + d2)); k += d2; }
+
+        const divisor = rsDivisor(ecLen);
+        const eccBlocks = blocks.map(b => rsRemainder(b, divisor));
+
+        const out = [];
+        const maxLen = Math.max(d1, d2);
+        for (let i = 0; i < maxLen; i++)
+            for (const b of blocks) if (i < b.length) out.push(b[i]);
+
+        for (let i = 0; i < ecLen; i++)
+            for (const e of eccBlocks) out.push(e[i]);
+
+        return out;
+    }
+
+    function maskCondition(mask, x, y) {
+        switch (mask) {
+            case 0: return (x + y) % 2 === 0;
+            case 1: return y % 2 === 0;
+            case 2: return x % 3 === 0;
+            case 3: return (x + y) % 3 === 0;
+            case 4: return (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0;
+            case 5: return ((x * y) % 2) + ((x * y) % 3) === 0;
+            case 6: return (((x * y) % 2) + ((x * y) % 3)) % 2 === 0;
+            case 7: return (((x + y) % 2) + ((x * y) % 3)) % 2 === 0;
+        }
+        return false;
+    }
+
+    function penalty(m, size) {
+        let p = 0;
+        for (let y = 0; y < size; y++) {
+            let run = 1;
+            for (let x = 1; x < size; x++) {
+                if (m[y][x] === m[y][x - 1]) run++;
+                else { if (run >= 5) p += 3 + (run - 5); run = 1; }
+            }
+            if (run >= 5) p += 3 + (run - 5);
+        }
+        for (let x = 0; x < size; x++) {
+            let run = 1;
+            for (let y = 1; y < size; y++) {
+                if (m[y][x] === m[y - 1][x]) run++;
+                else { if (run >= 5) p += 3 + (run - 5); run = 1; }
+            }
+            if (run >= 5) p += 3 + (run - 5);
+        }
+        for (let y = 0; y < size - 1; y++) {
+            for (let x = 0; x < size - 1; x++) {
+                const c = m[y][x];
+                if (c === m[y][x + 1] && c === m[y + 1][x] && c === m[y + 1][x + 1]) p += 3;
+            }
+        }
+        const pat1 = [true,false,true,true,true,false,true,false,false,false,false];
+        const pat2 = [false,false,false,false,true,false,true,true,true,false,true];
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x + 11 <= size; x++) {
+                let m1 = true, m2 = true;
+                for (let k = 0; k < 11; k++) {
+                    if (m[y][x + k] !== pat1[k]) m1 = false;
+                    if (m[y][x + k] !== pat2[k]) m2 = false;
+                }
+                if (m1) p += 40;
+                if (m2) p += 40;
+            }
+        }
+        for (let x = 0; x < size; x++) {
+            for (let y = 0; y + 11 <= size; y++) {
+                let m1 = true, m2 = true;
+                for (let k = 0; k < 11; k++) {
+                    if (m[y + k][x] !== pat1[k]) m1 = false;
+                    if (m[y + k][x] !== pat2[k]) m2 = false;
+                }
+                if (m1) p += 40;
+                if (m2) p += 40;
+            }
+        }
+        let dark = 0;
+        for (let y = 0; y < size; y++)
+            for (let x = 0; x < size; x++) if (m[y][x]) dark++;
+        const total = size * size;
+        p += Math.floor(Math.abs(dark * 20 - total * 10) / total) * 10;
+        return p;
+    }
+
+    function encode(text, ecl) {
+        ecl = ecl || 'M';
+        const bytes = Array.from(new TextEncoder().encode(text));
+
+        let version = 0;
+        for (let v = 1; v <= 10; v++) {
+            const cap = dataCodewords(v, ecl);
+            const ccBits = (v <= 9) ? 8 : 16;
+            if (4 + ccBits + bytes.length * 8 <= cap * 8) { version = v; break; }
+        }
+        if (!version) throw new Error('النص طويل جداً — الحد الأقصى حوالي 271 حرفاً للإصدار 10');
+
+        const size = version * 4 + 17;
+        const capBits = dataCodewords(version, ecl) * 8;
+
+        const bits = [];
+        const pushBits = (val, len) => {
+            for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1);
+        };
+        pushBits(0b0100, 4);
+        pushBits(bytes.length, version <= 9 ? 8 : 16);
+        for (const b of bytes) pushBits(b, 8);
+
+        pushBits(0, Math.min(4, capBits - bits.length));
+        while (bits.length % 8 !== 0) bits.push(0);
+
+        const padBytes = [0xEC, 0x11];
+        let pi = 0;
+        while (bits.length < capBits) pushBits(padBytes[pi++ % 2], 8);
+
+        const dataBytes = [];
+        for (let i = 0; i < bits.length; i += 8) {
+            let b = 0;
+            for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+            dataBytes.push(b);
+        }
+
+        const finalCw = addEccAndInterleave(dataBytes, version, ecl);
+
+        const modules = [], isFunc = [];
+        for (let i = 0; i < size; i++) {
+            modules.push(new Array(size).fill(false));
+            isFunc.push(new Array(size).fill(false));
+        }
+        const setF = (x, y, dark) => {
+            if (x < 0 || x >= size || y < 0 || y >= size) return;
+            modules[y][x] = dark;
+            isFunc[y][x] = true;
+        };
+
+        for (let i = 0; i < size; i++) {
+            setF(6, i, i % 2 === 0);
+            setF(i, 6, i % 2 === 0);
+        }
+
+        function drawFinder(cx, cy) {
+            for (let dy = -4; dy <= 4; dy++) {
+                for (let dx = -4; dx <= 4; dx++) {
+                    const d = Math.max(Math.abs(dx), Math.abs(dy));
+                    setF(cx + dx, cy + dy, d !== 2 && d !== 4);
+                }
+            }
+        }
+        drawFinder(3, 3);
+        drawFinder(size - 4, 3);
+        drawFinder(3, size - 4);
+
+        const apos = ALIGN_POS[version];
+        for (const ay of apos) {
+            for (const ax of apos) {
+                if ((ax === 6 && ay === 6) ||
+                    (ax === 6 && ay === size - 7) ||
+                    (ax === size - 7 && ay === 6)) continue;
+                for (let dy = -2; dy <= 2; dy++) {
+                    for (let dx = -2; dx <= 2; dx++) {
+                        setF(ax + dx, ay + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+                    }
+                }
+            }
+        }
+
+        if (version >= 7) {
+            let rem = version;
+            for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+            const vbits = (version << 12) | rem;
+            for (let i = 0; i < 18; i++) {
+                const bit = ((vbits >>> i) & 1) !== 0;
+                const a = size - 11 + (i % 3);
+                const b = Math.floor(i / 3);
+                setF(a, b, bit);
+                setF(b, a, bit);
+            }
+        }
+
+        const dataBits = [];
+        for (const b of finalCw) {
+            for (let i = 7; i >= 0; i--) dataBits.push((b >>> i) & 1);
+        }
+
+        let idx = 0;
+        for (let right = size - 1; right >= 1; right -= 2) {
+            if (right === 6) right = 5;
+            for (let vert = 0; vert < size; vert++) {
+                for (let j = 0; j < 2; j++) {
+                    const x = right - j;
+                    const upward = ((right + 1) & 2) === 0;
+                    const y = upward ? size - 1 - vert : vert;
+                    if (!isFunc[y][x] && idx < dataBits.length) {
+                        modules[y][x] = dataBits[idx] === 1;
+                        idx++;
+                    }
+                }
+            }
+        }
+
+        function applyMaskAndFormat(mask) {
+            const m = modules.map(row => row.slice());
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    if (!isFunc[y][x] && maskCondition(mask, x, y)) m[y][x] = !m[y][x];
+                }
+            }
+
+            const fmtData = (ECL_FORMAT[ecl] << 3) | mask;
+            let rem = fmtData;
+            for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+            const fb = ((fmtData << 10) | rem) ^ 0x5412;
+            const bitAt = i => ((fb >>> i) & 1) !== 0;
+
+            for (let i = 0; i <= 5; i++) m[i][8] = bitAt(i);
+            m[7][8] = bitAt(6);
+            m[8][8] = bitAt(7);
+            m[8][7] = bitAt(8);
+            for (let i = 9; i < 15; i++) m[8][14 - i] = bitAt(i);
+
+            for (let i = 0; i < 8; i++) m[8][size - 1 - i] = bitAt(i);
+            for (let i = 8; i < 15; i++) m[size - 15 + i][8] = bitAt(i);
+            m[size - 8][8] = true;
+
+            return m;
+        }
+
+        let best = null, bestScore = Infinity;
+        for (let mask = 0; mask < 8; mask++) {
+            const candidate = applyMaskAndFormat(mask);
+            const score = penalty(candidate, size);
+            if (score < bestScore) { bestScore = score; best = candidate; }
+        }
+
+        return { size, modules: best, version };
+    }
+
+    function render(canvas, code, scale) {
+        scale = scale || 6;
+        const quiet = 4;
+        const dim = (code.size + quiet * 2) * scale;
+        canvas.width = dim;
+        canvas.height = dim;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, dim, dim);
+        ctx.fillStyle = '#000000';
+        for (let y = 0; y < code.size; y++) {
+            for (let x = 0; x < code.size; x++) {
+                if (code.modules[y][x]) {
+                    ctx.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale);
+                }
+            }
+        }
+    }
+
+    return { encode, render };
+})();
+
+
+/* =========================================================================
+   توليد رموز QR
+   ========================================================================= */
+function generateTextQR() {
+    const text = $('qrText').value.trim();
+    const ecl = $('qrEcc').value;
+    const status = $('qrStatus');
+    const canvas = $('qrCanvas');
+    const dl = $('qrDownload');
+
+    if (!text) { showStatus(status, 'الرجاء إدخال نص أو رابط أولاً', true); return; }
+
+    try {
+        const code = QR.encode(text, ecl);
+        QR.render(canvas, code, 6);
+        showStatus(status, 'تم توليد الرمز بنجاح (الإصدار ' + code.version + ')', false);
+        dl.classList.remove('hidden');
+    } catch (err) {
+        canvas.width = 0; canvas.height = 0;
+        dl.classList.add('hidden');
+        showStatus(status, err.message, true);
+    }
+}
+
+function resizeImageFile(file, maxSize, quality) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('تعذّر قراءة الملف'));
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('الملف ليس صورة صالحة'));
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                const scale = Math.min(1, maxSize / Math.max(w, h));
+                w = Math.max(1, Math.round(w * scale));
+                h = Math.max(1, Math.round(h * scale));
+
+                const c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(c.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function generateImageQR() {
+    const fileInput = $('imageInput');
+    const status = $('imgQrStatus');
+    const canvas = $('imgQrCanvas');
+    const dl = $('imgQrDownload');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showStatus(status, 'الرجاء اختيار صورة أولاً', true);
+        return;
+    }
+
+    showStatus(status, 'جاري معالجة الصورة...', false);
+
+    try {
+        const dataUrl = await resizeImageFile(fileInput.files[0], 128, 0.7);
+
+        // ملاحظة: هنا نستخدم localStorage للتخزين المحلي.
+        // لجعله يعمل عالميًا نحتاج دالة رفع أخرى في Netlify.
+        const key = 'img_' + Math.random().toString(36).slice(2, 8);
+        try {
+            localStorage.setItem(key, dataUrl);
+        } catch (e) {
+            showStatus(status, 'ذاكرة المتصفح ممتلئة، جرّب صورة أصغر', true);
+            return;
+        }
+
+        const url = location.origin + location.pathname + '#img=' + key;
+        const code = QR.encode(url, 'M');
+        QR.render(canvas, code, 6);
+        dl.classList.remove('hidden');
+        showStatus(status, 'تم توليد رمز QR للصورة بنجاح ✅', false);
+    } catch (err) {
+        showStatus(status, err.message || 'حدث خطأ أثناء المعالجة', true);
+    }
+}
+
+
+/* =========================================================================
+   القسم 4 : تحويل الصوت إلى نص
+   ========================================================================= */
+let recognition = null;
+let isRecording = false;
+let manualStop = false;
+let finalTranscript = '';
+
+(function initSpeech() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const status = $('speechStatus');
+
+    if (!SR) {
+        $('recordBtn').disabled = true;
+        showStatus(status, 'متصفحك لا يدعم التعرف على الصوت. استخدم Chrome أو Edge.', true);
+        return;
+    }
+
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'ar-SA';
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = function (event) {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const txt = event.results[i][0].transcript;
+            if (event.results[i].isFinal) finalTranscript += txt + ' ';
+            else interim += txt;
+        }
+        const ta = $('speechText');
+        ta.value = finalTranscript + interim;
+        ta.scrollTop = ta.scrollHeight;
+        updateSpeechButtons();
+    };
+
+    recognition.onerror = function (event) {
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            showStatus(status, 'تم رفض إذن الميكروفون. اسمح بالوصول ثم أعد المحاولة.', true);
+            stopDictation();
+        } else if (event.error === 'no-speech') {
+            showStatus(status, 'لم يتم التقاط صوت... تابع التحدث', false);
+        } else if (event.error === 'audio-capture') {
+            showStatus(status, 'لم يتم العثور على ميكروفون متاح', true);
+            stopDictation();
+        } else if (event.error !== 'aborted') {
+            showStatus(status, 'خطأ في التعرف على الصوت: ' + event.error, true);
+        }
+    };
+
+    recognition.onend = function () {
+        if (isRecording && !manualStop) {
+            try { recognition.start(); } catch (e) { /* تجاهل */ }
+        }
+    };
+
+    recognition.onstart = function () {
+        showStatus(status, '🎤 جاري الاستماع... تحدث الآن', false);
+    };
+})();
+
+function toggleDictation() {
+    if (!recognition) return;
+    if (!isRecording) startDictation();
+    else stopDictation();
+}
+
+function startDictation() {
+    manualStop = false;
+    try { recognition.start(); } catch (e) {}
+    isRecording = true;
+    const btn = $('recordBtn');
+    btn.textContent = 'إيقاف التسجيل 🛑';
+    btn.classList.add('btn-red');
+    updateSpeechButtons();
+}
+
+function stopDictation() {
+    isRecording = false;
+    manualStop = true;
+    if (recognition) { try { recognition.stop(); } catch (e) {} }
+
+    const btn = $('recordBtn');
+    btn.textContent = 'ابدأ التحدث الآن 🎤';
+    btn.classList.remove('btn-red');
+    hideStatus($('speechStatus'));
+    updateSpeechButtons();
+}
+
+function updateSpeechButtons() {
+    const hasText = $('speechText').value.trim().length > 0;
+    $('downloadBtn').classList.toggle('hidden', !hasText);
+    $('copyBtn').classList.toggle('hidden', !hasText);
+    $('clearBtn').classList.toggle('hidden', !hasText);
+}
+
+function downloadTextFile() {
+    const text = $('speechText').value;
+    if (!text.trim()) { alert('لا يوجد نص لتحميله'); return; }
+
+    const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'النص-المحول.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function copyText() {
+    const text = $('speechText').value;
+    if (!text.trim()) return;
+    navigator.clipboard.writeText(text).then(
+        () => showStatus($('speechStatus'), 'تم نسخ النص ✅', false),
+        () => alert('تعذّر النسخ، انسخ يدوياً')
+    );
+}
+
+function clearText() {
+    $('speechText').value = '';
+    finalTranscript = '';
+    updateSpeechButtons();
+}
+
+$('speechText').addEventListener('input', updateSpeechButtons);
+
+
+/* =========================================================================
+   موجّه الروابط (للصور المحلية)
+   ========================================================================= */
+function handleRoute() {
+    const hash = location.hash || '';
+    if (hash.startsWith('#img=')) {
+        const key = hash.slice(5);
+        const data = localStorage.getItem(key);
+        const panel = $('viewerPanel');
+        if (!panel) return;
+        const content = $('viewerContent');
+        if (data) {
+            content.innerHTML =
+                '<img src="' + data + '" alt="صورة">' +
+                '<a href="' + data + '" download="صورة-qr.jpg" ' +
+                'style="display:block;text-align:center;margin-top:12px;color:#16a085;font-weight:bold;">تحميل الصورة 💾</a>';
+            panel.style.display = 'block';
+            panel.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            content.innerHTML = '<p style="color:#c0392b">الصورة غير موجودة على هذا الجهاز/المتصفح.</p>';
+            panel.style.display = 'block';
+        }
+    }
+}
+
+window.addEventListener('hashchange', handleRoute);
+window.addEventListener('DOMContentLoaded', handleRoute);
+
+/* توليد رمز QR تلقائياً */
+let qrTimer = null;
+$('qrText').addEventListener('input', function () {
+    clearTimeout(qrTimer);
+    qrTimer = setTimeout(() => {
+        if ($('qrText').value.trim()) generateTextQR();
+    }, 500);
+});
+$('qrEcc').addEventListener('change', () => {
+    if ($('qrText').value.trim()) generateTextQR();
+});
+</script>
+
+</body>
+</html>
