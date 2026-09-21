@@ -2,39 +2,47 @@
 const { getStore } = require('@netlify/blobs');
 
 exports.handler = async (event) => {
-    try {
-        // استخراج الكود القصير من مسار URL
-        // مثال: /s/abc123 -> الكود هو abc123
-        const pathParts = event.path.split('/');
-        const shortCode = pathParts[pathParts.length - 1];
+    const htmlHeaders = { 'Content-Type': 'text/html; charset=utf-8' };
 
+    try {
+        // نقرأ الكود من query parameter أولاً (الأكثر موثوقية)
+        let shortCode = event.queryStringParameters && event.queryStringParameters.code;
+
+        // احتياطي: من المسار مباشرة
         if (!shortCode) {
-            return { statusCode: 404, body: 'الرابط المختصر غير موجود' };
+            const parts = event.path.split('/').filter(Boolean);
+            shortCode = parts[parts.length - 1];
         }
 
-        // الحصول على مخزن البيانات
-        const store = getStore('short-links');
+        if (!shortCode || shortCode === 'redirect') {
+            return {
+                statusCode: 404,
+                headers: htmlHeaders,
+                body: '<h2>الرابط غير موجود</h2>'
+            };
+        }
 
-        // البحث عن الرابط الأصلي باستخدام الكود
+        const store = getStore('short-links');
         const originalUrl = await store.get(shortCode);
 
         if (!originalUrl) {
-            return { statusCode: 404, body: 'الرابط المختصر غير موجود أو منتهي الصلاحية' };
+            return {
+                statusCode: 404,
+                headers: htmlHeaders,
+                body: '<h2>الرابط المختصر غير موجود</h2><p>تأكد من صحة الرابط.</p>'
+            };
         }
 
-        // إعادة التوجيه إلى الرابط الأصلي
         return {
-            statusCode: 302, // 302 تعني إعادة توجيه مؤقت
-            headers: {
-                Location: originalUrl,
-            },
+            statusCode: 302,
+            headers: { Location: originalUrl }
         };
-
     } catch (error) {
-        console.error('Error redirecting:', error);
+        console.error('Redirect error:', error);
         return {
             statusCode: 500,
-            body: 'حدث خطأ أثناء إعادة التوجيه'
+            headers: htmlHeaders,
+            body: '<h2>خطأ في السيرفر</h2><p>' + error.message + '</p>'
         };
     }
 };

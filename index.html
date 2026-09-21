@@ -115,7 +115,7 @@
     <h1>منصة الأدوات الثلاثية</h1>
     <p class="sub">اختصار روابط • توليد QR • تحويل صوت إلى نص</p>
 
-    <!-- ================= 1. اختصار الروابط (عبر Netlify) ================= -->
+    <!-- ================= 1. اختصار الروابط ================= -->
     <div class="card">
         <h2>1. اختصار الروابط</h2>
         <p>أدخل الرابط الطويل ليتم توليد رابط مختصر يعمل عالميًا:</p>
@@ -212,10 +212,7 @@ async function shortenLink() {
     const box = $('shortenResult');
     let url = input.value.trim();
 
-    if (!url) {
-        alert('الرجاء إدخال رابط أولاً');
-        return;
-    }
+    if (!url) { alert('الرجاء إدخال رابط أولاً'); return; }
 
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
@@ -232,10 +229,15 @@ async function shortenLink() {
             body: JSON.stringify({ url })
         });
 
-        const data = await response.json();
+        const textResponse = await response.text();
+        let data;
+        try { data = JSON.parse(textResponse); }
+        catch (e) {
+            throw new Error('رد غير متوقع من السيرفر: ' + textResponse.substring(0, 100));
+        }
 
         if (!response.ok) {
-            throw new Error(data.error || 'فشل اختصار الرابط');
+            throw new Error(data.error || ('HTTP ' + response.status));
         }
 
         const shortUrl = window.location.origin + '/s/' + data.shortCode;
@@ -662,8 +664,6 @@ async function generateImageQR() {
     try {
         const dataUrl = await resizeImageFile(fileInput.files[0], 128, 0.7);
 
-        // ملاحظة: هنا نستخدم localStorage للتخزين المحلي.
-        // لجعله يعمل عالميًا نحتاج دالة رفع أخرى في Netlify.
         const key = 'img_' + Math.random().toString(36).slice(2, 8);
         try {
             localStorage.setItem(key, dataUrl);
@@ -810,35 +810,6 @@ function clearText() {
 }
 
 $('speechText').addEventListener('input', updateSpeechButtons);
-
-
-/* =========================================================================
-   موجّه الروابط (للصور المحلية)
-   ========================================================================= */
-function handleRoute() {
-    const hash = location.hash || '';
-    if (hash.startsWith('#img=')) {
-        const key = hash.slice(5);
-        const data = localStorage.getItem(key);
-        const panel = $('viewerPanel');
-        if (!panel) return;
-        const content = $('viewerContent');
-        if (data) {
-            content.innerHTML =
-                '<img src="' + data + '" alt="صورة">' +
-                '<a href="' + data + '" download="صورة-qr.jpg" ' +
-                'style="display:block;text-align:center;margin-top:12px;color:#16a085;font-weight:bold;">تحميل الصورة 💾</a>';
-            panel.style.display = 'block';
-            panel.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            content.innerHTML = '<p style="color:#c0392b">الصورة غير موجودة على هذا الجهاز/المتصفح.</p>';
-            panel.style.display = 'block';
-        }
-    }
-}
-
-window.addEventListener('hashchange', handleRoute);
-window.addEventListener('DOMContentLoaded', handleRoute);
 
 /* توليد رمز QR تلقائياً */
 let qrTimer = null;

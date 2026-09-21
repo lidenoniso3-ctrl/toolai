@@ -4,6 +4,6 @@
 
 [[redirects]]
   from = "/s/*"
-  to = "/.netlify/functions/redirect"
+  to = "/.netlify/functions/redirect?code=:splat"
   status = 200
   force = true

@@ -1,43 +1,79 @@
 // netlify/functions/shorten.js
 const { getStore } = require('@netlify/blobs');
 
+const CHARS = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generateCode(len) {
+    let code = '';
+    for (let i = 0; i < len; i++) {
+        code += CHARS[Math.floor(Math.random() * CHARS.length)];
+    }
+    return code;
+}
+
 exports.handler = async (event) => {
-    // التأكد من أن الطلب هو POST
+    const headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*'
+    };
+
+    if (event.httpMethod === 'OPTIONS') {
+        return { statusCode: 204, headers };
+    }
+
     if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+        return {
+            statusCode: 405,
+            headers,
+            body: JSON.stringify({ error: 'Method Not Allowed' })
+        };
     }
 
     try {
-        const { url } = JSON.parse(event.body);
+        const body = JSON.parse(event.body || '{}');
+        let url = (body.url || '').trim();
 
-        // التحقق من صحة الرابط
-        if (!url || !/^https?:\/\//i.test(url)) {
+        if (!url) {
             return {
                 statusCode: 400,
-                body: JSON.stringify({ error: 'الرجاء إدخال رابط صالح يبدأ بـ http:// أو https://' })
+                headers,
+                body: JSON.stringify({ error: 'الرجاء إدخال رابط' })
             };
         }
 
-        // إنشاء كود قصير عشوائي (6 أحرف)
-        const shortCode = Math.random().toString(36).substring(2, 8);
+        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
-        // الحصول على مخزن البيانات (Blob Store)
+        try { new URL(url); }
+        catch (e) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'الرابط غير صالح' })
+            };
+        }
+
         const store = getStore('short-links');
 
-        // حفظ الرابط في المخزن باستخدام الكود كمفتاح
+        let shortCode, exists, attempts = 0;
+        do {
+            shortCode = generateCode(6);
+            exists = await store.get(shortCode);
+            attempts++;
+        } while (exists && attempts < 10);
+
         await store.set(shortCode, url);
 
-        // إعادة الكود القصير
         return {
             statusCode: 200,
-            body: JSON.stringify({ shortCode })
+            headers,
+            body: JSON.stringify({ shortCode, url })
         };
-
     } catch (error) {
-        console.error('Error shortening link:', error);
+        console.error('Shorten error:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'حدث خطأ أثناء اختصار الرابط' })
+            headers,
+            body: JSON.stringify({ error: 'خطأ في السيرفر: ' + error.message })
         };
     }
 };
